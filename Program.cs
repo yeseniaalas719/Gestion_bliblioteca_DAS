@@ -211,7 +211,6 @@ namespace BibliotecaApp
                 foreach (var u in usuariosList) usuarios.Add(u);
                 foreach (var p in prestamosList) prestamos.Add(p);
 
-                // Asegurar secuencia de IDs
                 if (libros.Any()) nextLibroId = libros.Max(x => x.Id) + 1;
                 if (usuarios.Any()) nextUsuarioId = usuarios.Max(x => x.Id) + 1;
                 if (prestamos.Any()) nextPrestamoId = prestamos.Max(x => x.Id) + 1;
