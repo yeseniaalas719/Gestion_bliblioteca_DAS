@@ -56,7 +56,10 @@ namespace BibliotecaApp
                 File.WriteAllText(PrestamosFile, JsonSerializer.Serialize(prestamos.ToList(), Options));
             }
             catch
- 
+            {
+                // Ignorar errores al guardar
+            }
+        }
 
         public static void CargarTodos(out List<Libro> libros, out List<Usuario> usuarios, out List<Prestamo> prestamos)
         {
@@ -579,7 +582,7 @@ namespace BibliotecaApp
                 if (dgvPrestamos.Columns["Estado"] != null) dgvPrestamos.Columns["Estado"].HeaderText = "Estado";
                 EstilizarFilasPrestamos();
                 try { dgvPrestamos.ClearSelection(); } catch { }
-            }
+            };
 
             tab.Controls.Add(dgvPrestamos);
             tab.Controls.Add(flow);
