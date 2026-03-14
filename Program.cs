@@ -56,10 +56,7 @@ namespace BibliotecaApp
                 File.WriteAllText(PrestamosFile, JsonSerializer.Serialize(prestamos.ToList(), Options));
             }
             catch
-            {
-                // ignore errors for now - could log
-            }
-        }
+ 
 
         public static void CargarTodos(out List<Libro> libros, out List<Usuario> usuarios, out List<Prestamo> prestamos)
         {
@@ -86,7 +83,6 @@ namespace BibliotecaApp
             }
             catch
             {
-                // ignore errors - return empty lists on failure
             }
         }
     }
@@ -564,7 +560,6 @@ namespace BibliotecaApp
             dgvPrestamos.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             dgvPrestamos.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
 
-            // Softer selection for prestamos grid
             dgvPrestamos.DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 245, 255);
             dgvPrestamos.DefaultCellStyle.SelectionForeColor = Color.Black;
             dgvPrestamos.RowsDefaultCellStyle.SelectionBackColor = dgvPrestamos.DefaultCellStyle.SelectionBackColor;
@@ -584,7 +579,7 @@ namespace BibliotecaApp
                 if (dgvPrestamos.Columns["Estado"] != null) dgvPrestamos.Columns["Estado"].HeaderText = "Estado";
                 EstilizarFilasPrestamos();
                 try { dgvPrestamos.ClearSelection(); } catch { }
-            };
+            }
 
             tab.Controls.Add(dgvPrestamos);
             tab.Controls.Add(flow);
