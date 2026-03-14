@@ -640,14 +640,21 @@ namespace BibliotecaApp
         {
             txtTitulo.Text = "Cien años de soledad";
             txtAutor.Text = "Gabriel García Márquez";
-            txtIsbn.Text = "978-3-16-148410-0";
+            txtIsbn.Text = "123-456-789";
             numCopias.Value = 5;
             numAnio.Value = 1967;
             GuardarLibro();
 
-            txtNombre.Text = "Juan";
-            txtDocumento.Text = "12345678-9";
-            txtEmail.Text = "juan@example.com";
+            txtTitulo.Text = "La metamorfosis";
+            txtAutor.Text = "Franz Kafka";
+            txtIsbn.Text = "123-456";
+            numCopias.Value = 5;
+            numAnio.Value = 1915;
+            GuardarLibro();
+
+            txtNombre.Text = "Yesenia";
+            txtDocumento.Text = "123456789";
+            txtEmail.Text = "Yesenia@example.com";
             GuardarUsuario();
         }
     }
