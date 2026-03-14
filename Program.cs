@@ -1,7 +1,10 @@
     using System;
     using System.ComponentModel;
     using System.Drawing;
+    using System.IO;
     using System.Linq;
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
     using System.Windows.Forms;
 
 namespace BibliotecaApp
@@ -25,6 +28,67 @@ namespace BibliotecaApp
         public string Nombre { get; set; }
         public string Documento { get; set; }
         public string Email { get; set; }
+    }
+
+    // Gestor de persistencia simple usando System.Text.Json
+    public static class GestorDatos
+    {
+        private static readonly string DataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
+        private static readonly string LibrosFile = Path.Combine(DataDir, "libros.json");
+        private static readonly string UsuariosFile = Path.Combine(DataDir, "usuarios.json");
+        private static readonly string PrestamosFile = Path.Combine(DataDir, "prestamos.json");
+
+        private static JsonSerializerOptions Options => new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        public static void GuardarTodos(BindingList<Libro> libros, BindingList<Usuario> usuarios, BindingList<Prestamo> prestamos)
+        {
+            try
+            {
+                if (!Directory.Exists(DataDir)) Directory.CreateDirectory(DataDir);
+
+                File.WriteAllText(LibrosFile, JsonSerializer.Serialize(libros.ToList(), Options));
+                File.WriteAllText(UsuariosFile, JsonSerializer.Serialize(usuarios.ToList(), Options));
+                File.WriteAllText(PrestamosFile, JsonSerializer.Serialize(prestamos.ToList(), Options));
+            }
+            catch
+            {
+                // ignore errors for now - could log
+            }
+        }
+
+        public static void CargarTodos(out List<Libro> libros, out List<Usuario> usuarios, out List<Prestamo> prestamos)
+        {
+            libros = new List<Libro>();
+            usuarios = new List<Usuario>();
+            prestamos = new List<Prestamo>();
+            try
+            {
+                if (File.Exists(LibrosFile))
+                {
+                    var json = File.ReadAllText(LibrosFile);
+                    libros = JsonSerializer.Deserialize<List<Libro>>(json, Options) ?? new List<Libro>();
+                }
+                if (File.Exists(UsuariosFile))
+                {
+                    var json = File.ReadAllText(UsuariosFile);
+                    usuarios = JsonSerializer.Deserialize<List<Usuario>>(json, Options) ?? new List<Usuario>();
+                }
+                if (File.Exists(PrestamosFile))
+                {
+                    var json = File.ReadAllText(PrestamosFile);
+                    prestamos = JsonSerializer.Deserialize<List<Prestamo>>(json, Options) ?? new List<Prestamo>();
+                }
+            }
+            catch
+            {
+                // ignore errors - return empty lists on failure
+            }
+        }
     }
 
     // Resalta filas de préstamos activos y libros sin disponibilidad
@@ -139,7 +203,27 @@ namespace BibliotecaApp
             StartPosition = FormStartPosition.CenterScreen;
 
             InicializarComponentes();
-            CargarDatosPrueba();
+
+            // Cargar datos desde archivos si existen
+            GestorDatos.CargarTodos(out var librosList, out var usuariosList, out var prestamosList);
+            if (librosList.Any() || usuariosList.Any() || prestamosList.Any())
+            {
+                foreach (var l in librosList) libros.Add(l);
+                foreach (var u in usuariosList) usuarios.Add(u);
+                foreach (var p in prestamosList) prestamos.Add(p);
+
+                // Asegurar secuencia de IDs
+                if (libros.Any()) nextLibroId = libros.Max(x => x.Id) + 1;
+                if (usuarios.Any()) nextUsuarioId = usuarios.Max(x => x.Id) + 1;
+                if (prestamos.Any()) nextPrestamoId = prestamos.Max(x => x.Id) + 1;
+            }
+            else
+            {
+                CargarDatosPrueba();
+            }
+
+            // Guardado automático al cerrar
+            this.FormClosing += (s, e) => { GestorDatos.GuardarTodos(libros, usuarios, prestamos); };
         }
 
         private void InicializarComponentes()
