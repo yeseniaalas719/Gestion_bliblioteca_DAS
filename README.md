@@ -28,6 +28,8 @@ La aplicación está dividida en tres módulos principales:
 
 3-Préstamos y Devoluciones: El sistema valida que existan copias disponibles antes de prestar.
 
+4- Estadísticas: Permite una visualización detallada mediante gráficos.
+
 **No permite que un usuario preste el mismo libro dos veces simultáneamente**
 
 Indicadores Visuales (Colores):
