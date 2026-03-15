@@ -14,9 +14,9 @@ namespace BibliotecaApp
     public class Libro
     {
         public int Id { get; set; }
-        public string Titulo { get; set; }
-        public string Autor { get; set; }
-        public string ISBN { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string Autor { get; set; } = string.Empty;
+        public string ISBN { get; set; } = string.Empty;
         public int Copias { get; set; }
         public int Anio { get; set; }
         public int Disponibles { get; set; }
@@ -25,9 +25,9 @@ namespace BibliotecaApp
     public class Usuario
     {
         public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Documento { get; set; }
-        public string Email { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string Documento { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
     }
 
     // Gestor de persistencia simple usando System.Text.Json
@@ -129,12 +129,12 @@ namespace BibliotecaApp
 
                 if (libro.Disponibles <= 0)
                 {
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 235, 238); // light red
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 235, 238);
                     row.DefaultCellStyle.ForeColor = Color.Black;
                 }
                 else if (libro.Disponibles < libro.Copias)
                 {
-                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 249, 196); // light green
+                    row.DefaultCellStyle.BackColor = Color.FromArgb(255, 249, 196);
                     row.DefaultCellStyle.ForeColor = Color.Black;
                 }
                 else
@@ -149,11 +149,11 @@ namespace BibliotecaApp
     public class Prestamo
     {
         public int Id { get; set; }
-        public string Libro { get; set; }
-        public string Usuario { get; set; }
+        public string Libro { get; set; } = string.Empty;
+        public string Usuario { get; set; } = string.Empty;
         public DateTime Fecha { get; set; }
         public DateTime? FechaDevolucion { get; set; }
-        public string Estado { get; set; }
+        public string Estado { get; set; } = string.Empty;
         public int LibroId { get; set; }
     }
 
@@ -183,16 +183,17 @@ namespace BibliotecaApp
         private int nextPrestamoId = 1;
 
         // Controles UI
-        private TabControl tabControl;
-        private DataGridView dgvLibros, dgvUsuarios, dgvPrestamos;
-        private TextBox txtTitulo, txtAutor, txtIsbn;
-        private NumericUpDown numCopias, numAnio;
-        private TextBox txtNombre, txtDocumento, txtEmail;
-        private ComboBox cmbLibros, cmbUsuarios;
-        private ToolTip toolTip;
-        private StatusStrip statusStrip;
-        private ToolStripStatusLabel statusLabel;
-        private ErrorProvider errorProvider;
+        private TabControl tabControl = null!;
+        private DataGridView dgvLibros = null!, dgvUsuarios = null!, dgvPrestamos = null!;
+        private PictureBox chartDisponibilidad = null!, chartLibrosMasLeidos = null!, chartTopUsuarios = null!;
+        private TextBox txtTitulo = null!, txtAutor = null!, txtIsbn = null!;
+        private NumericUpDown numCopias = null!, numAnio = null!;
+        private TextBox txtNombre = null!, txtDocumento = null!, txtEmail = null!;
+        private ComboBox cmbLibros = null!, cmbUsuarios = null!;
+        private ToolTip toolTip = null!;
+        private StatusStrip statusStrip = null!;
+        private ToolStripStatusLabel statusLabel = null!;
+        private ErrorProvider errorProvider = null!;
         private bool cmbLibrosFormatAttached = false;
 
         public MainForm()
@@ -219,6 +220,10 @@ namespace BibliotecaApp
             {
                 CargarDatosPrueba();
             }
+
+            // Asegurar que los combos y estadísticas reflejen los datos cargados
+            ActualizarCombos();
+            ActualizarEstadisticas();
 
             // Guardado automático al cerrar
             this.FormClosing += (s, e) => { GestorDatos.GuardarTodos(libros, usuarios, prestamos); };
@@ -256,10 +261,14 @@ namespace BibliotecaApp
 
             //  Pestaña Préstamos
             ConfigurarPanelPrestamos(tabPrestamos);
+            //  Pestaña Estadísticas
+            TabPage tabEstadisticas = new TabPage("Estadísticas");
+            ConfigurarPanelEstadisticas(tabEstadisticas);
 
             tabControl.TabPages.Add(tabLibros);
             tabControl.TabPages.Add(tabUsuarios);
             tabControl.TabPages.Add(tabPrestamos);
+            tabControl.TabPages.Add(tabEstadisticas);
             Controls.Add(tabControl);
             Controls.Add(statusStrip);
         }
@@ -382,6 +391,7 @@ namespace BibliotecaApp
             numCopias.Value = 1;
             numAnio.Value = DateTime.Now.Year;
             ActualizarCombos();
+            ActualizarEstadisticas();
             statusLabel.Text = $"Libro '{txtTitulo.Text}' agregado. Total libros: {libros.Count}";
         }
 
@@ -397,6 +407,7 @@ namespace BibliotecaApp
                 }
                 libros.Remove(libro);
                 ActualizarCombos();
+                ActualizarEstadisticas();
             }
         }
 
@@ -494,6 +505,7 @@ namespace BibliotecaApp
             usuarios.Add(new Usuario { Id = nextUsuarioId++, Nombre = txtNombre.Text, Documento = txtDocumento.Text, Email = txtEmail.Text });
             LimpiarTextos(txtNombre, txtDocumento, txtEmail);
             ActualizarCombos();
+            ActualizarEstadisticas();
         }
 
         private void EliminarUsuario()
@@ -508,6 +520,7 @@ namespace BibliotecaApp
                 }
                 usuarios.Remove(usuario);
                 ActualizarCombos();
+                ActualizarEstadisticas();
             }
         }
 
@@ -657,9 +670,131 @@ namespace BibliotecaApp
 
             libro.Disponibles--;
             dgvLibros.Refresh();
+            ActualizarEstadisticas();
             statusLabel.Text = $"Préstamo registrado: {libro.Titulo} → {usuario.Nombre}";
             EstilizarFilasLibros();
             EstilizarFilasPrestamos();
+        }
+
+        // UI: PANEL DE ESTADÍSTICAS
+        private void ConfigurarPanelEstadisticas(TabPage tab)
+        {
+            var main = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, FlowDirection = FlowDirection.TopDown };
+
+            chartDisponibilidad = new PictureBox { Width = 600, Height = 250, BorderStyle = BorderStyle.FixedSingle, SizeMode = PictureBoxSizeMode.Normal };
+            chartLibrosMasLeidos = new PictureBox { Width = 600, Height = 250, BorderStyle = BorderStyle.FixedSingle, SizeMode = PictureBoxSizeMode.Normal };
+            chartTopUsuarios = new PictureBox { Width = 600, Height = 250, BorderStyle = BorderStyle.FixedSingle, SizeMode = PictureBoxSizeMode.Normal };
+
+            main.Controls.Add(chartDisponibilidad);
+            main.Controls.Add(chartLibrosMasLeidos);
+            main.Controls.Add(chartTopUsuarios);
+
+            tab.Controls.Add(main);
+
+            ActualizarEstadisticas();
+        }
+
+        private void ActualizarEstadisticas()
+        {
+            if (chartDisponibilidad == null) return;
+
+            // Disponibilidad por libro (columnas)
+            var items = libros.Take(10).Select(lb => new { lb.Titulo, lb.Disponibles }).ToList();
+            using (var bmp = new Bitmap(chartDisponibilidad.Width, chartDisponibilidad.Height))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                var font = new Font("Segoe UI", 9);
+                g.DrawString("Libros por disponibilidad", new Font("Segoe UI", 11, FontStyle.Bold), Brushes.Black, 8, 6);
+                if (!items.Any())
+                {
+                    g.DrawString("Sin datos", font, Brushes.Gray, 10, 40);
+                }
+                else
+                {
+                    int marginTop = 30;
+                    int w = bmp.Width - 40;
+                    int h = bmp.Height - marginTop - 30;
+                    int barWidth = Math.Max(10, w / Math.Max(1, items.Count * 2));
+                    int max = Math.Max(1, items.Max(x => x.Disponibles));
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        int x = 20 + i * (barWidth + 10);
+                        int barHeight = (int)( (items[i].Disponibles / (double)max) * (h - 20) );
+                        g.FillRectangle(Brushes.SteelBlue, x, marginTop + (h - barHeight), barWidth, barHeight);
+                        g.DrawString(items[i].Titulo, new Font("Segoe UI", 8), Brushes.Black, x, marginTop + h + 4);
+                        g.DrawString(items[i].Disponibles.ToString(), font, Brushes.Black, x, marginTop + (h - barHeight) - 16);
+                    }
+                }
+                chartDisponibilidad.Image?.Dispose();
+                chartDisponibilidad.Image = (Bitmap)bmp.Clone();
+            }
+
+            // Libros más prestados (barras horizontales)
+            var topLibros = prestamos.GroupBy(p => p.LibroId).Select(g => new { Id = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count).Take(8).ToList();
+            using (var bmp = new Bitmap(chartLibrosMasLeidos.Width, chartLibrosMasLeidos.Height))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                g.DrawString("Libros más prestados (estimado)", new Font("Segoe UI", 11, FontStyle.Bold), Brushes.Black, 8, 6);
+                if (!topLibros.Any())
+                {
+                    g.DrawString("Sin datos", new Font("Segoe UI", 9), Brushes.Gray, 10, 40);
+                }
+                else
+                {
+                    int marginTop = 30;
+                    int left = 140;
+                    int h = (bmp.Height - marginTop - 20) / Math.Max(1, topLibros.Count);
+                    int max = Math.Max(1, topLibros.Max(x => x.Count));
+                    for (int i = 0; i < topLibros.Count; i++)
+                    {
+                        var lb = libros.FirstOrDefault(x => x.Id == topLibros[i].Id);
+                        string title = lb != null ? lb.Titulo : topLibros[i].Id.ToString();
+                        int y = marginTop + i * h;
+                        int barW = (int)((topLibros[i].Count / (double)max) * (bmp.Width - left - 20));
+                        g.DrawString(title, new Font("Segoe UI", 9), Brushes.Black, 8, y + 4);
+                        g.FillRectangle(Brushes.Orange, left, y + 4, barW, h - 8);
+                        g.DrawString(topLibros[i].Count.ToString(), new Font("Segoe UI", 9), Brushes.Black, left + barW + 6, y + 4);
+                    }
+                }
+                chartLibrosMasLeidos.Image?.Dispose();
+                chartLibrosMasLeidos.Image = (Bitmap)bmp.Clone();
+            }
+
+            // Usuarios con más prestamos (barras horizontales)
+            var topUsers = prestamos.GroupBy(p => p.Usuario).Select(g => new { User = g.Key ?? "(sin nombre)", Count = g.Count() })
+                .OrderByDescending(x => x.Count).Take(8).ToList();
+            using (var bmp = new Bitmap(chartTopUsuarios.Width, chartTopUsuarios.Height))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                g.DrawString("Usuarios con más préstamos (estimado)", new Font("Segoe UI", 11, FontStyle.Bold), Brushes.Black, 8, 6);
+                if (!topUsers.Any())
+                {
+                    g.DrawString("Sin datos", new Font("Segoe UI", 9), Brushes.Gray, 10, 40);
+                }
+                else
+                {
+                    int marginTop = 30;
+                    int left = 160;
+                    int rowH = (bmp.Height - marginTop - 20) / Math.Max(1, topUsers.Count);
+                    int max = Math.Max(1, topUsers.Max(x => x.Count));
+                    var barBrush = Brushes.MediumSeaGreen;
+                    for (int i = 0; i < topUsers.Count; i++)
+                    {
+                        int y = marginTop + i * rowH;
+                        string label = string.IsNullOrWhiteSpace(topUsers[i].User) ? "(sin nombre)" : topUsers[i].User;
+                        int barW = (int)((topUsers[i].Count / (double)max) * (bmp.Width - left - 20));
+                        g.DrawString(label, new Font("Segoe UI", 9), Brushes.Black, 8, y + 4);
+                        g.FillRectangle(barBrush, left, y + 4, barW, rowH - 8);
+                        g.DrawString(topUsers[i].Count.ToString(), new Font("Segoe UI", 9), Brushes.Black, left + barW + 6, y + 4);
+                    }
+                }
+                chartTopUsuarios.Image?.Dispose();
+                chartTopUsuarios.Image = (Bitmap)bmp.Clone();
+            }
         }
 
         private void DevolverLibro()
@@ -681,6 +816,7 @@ namespace BibliotecaApp
 
                 dgvPrestamos.Refresh();
                 dgvLibros.Refresh();
+                ActualizarEstadisticas();
                 EstilizarFilasLibros();
                 EstilizarFilasPrestamos();
             }
@@ -694,27 +830,33 @@ namespace BibliotecaApp
 
         private void ActualizarCombos()
         {
-            cmbLibros.DataSource = null;
-            cmbLibros.DataSource = libros;
-            cmbLibros.DisplayMember = "Titulo";
-
-            if (!cmbLibrosFormatAttached)
+            if (cmbLibros != null)
             {
-                cmbLibros.Format += (s, e) =>
-                {
-                    var item = (Libro)e.ListItem;
-                    if (item != null) e.Value = $"{item.Titulo} ({item.Disponibles} disp.)";
-                };
-                cmbLibrosFormatAttached = true;
-            }
-            cmbLibros.AutoCompleteSource = AutoCompleteSource.ListItems;
-            cmbLibros.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+                cmbLibros.DataSource = null;
+                cmbLibros.DataSource = libros;
+                cmbLibros.DisplayMember = "Titulo";
 
-            cmbUsuarios.DataSource = null;
-            cmbUsuarios.DataSource = usuarios;
-            cmbUsuarios.DisplayMember = "Nombre";
-            cmbUsuarios.AutoCompleteSource = AutoCompleteSource.ListItems;
-            cmbUsuarios.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+                if (!cmbLibrosFormatAttached)
+                {
+                    cmbLibros.Format += (s, e) =>
+                    {
+                        var item = (Libro)e.ListItem;
+                        if (item != null) e.Value = $"{item.Titulo} ({item.Disponibles} disp.)";
+                    };
+                    cmbLibrosFormatAttached = true;
+                }
+                cmbLibros.AutoCompleteSource = AutoCompleteSource.ListItems;
+                cmbLibros.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            }
+
+            if (cmbUsuarios != null)
+            {
+                cmbUsuarios.DataSource = null;
+                cmbUsuarios.DataSource = usuarios;
+                cmbUsuarios.DisplayMember = "Nombre";
+                cmbUsuarios.AutoCompleteSource = AutoCompleteSource.ListItems;
+                cmbUsuarios.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            }
         }
 
         private void CargarDatosPrueba()
