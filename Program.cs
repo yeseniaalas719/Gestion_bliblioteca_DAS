@@ -205,7 +205,6 @@ namespace BibliotecaApp
 
             InicializarComponentes();
 
-            // Cargar datos desde archivos si existen
             GestorDatos.CargarTodos(out var librosList, out var usuariosList, out var prestamosList);
             if (librosList.Any() || usuariosList.Any() || prestamosList.Any())
             {
